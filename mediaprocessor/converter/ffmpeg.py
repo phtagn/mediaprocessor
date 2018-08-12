@@ -220,7 +220,6 @@ class FFMpeg(object):
         return cmds
 
     def convert2(self, cmds: list, timeout=10):
-        sys.exit(0)
         if timeout:
             def on_sigalrm(*_):
                 signal.signal(signal.SIGALRM, signal.SIG_DFL)

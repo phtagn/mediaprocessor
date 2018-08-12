@@ -283,23 +283,3 @@ def start_machine(infile, target, config, tagging_info=None, notify=None):
     vp.finish()
 
 
-if __name__ == '__main__':
-    showid = 75978
-    id_type2 = 'tvdb_id'
-    #tagging_info = {'id': 75978, 'id_type': 'tvdb_id', 'season': 16, 'episode': 19}
-    laptop = os.path.abspath('/Users/Jon/Downloads/in/The.Polar.Express.(2004).1080p.BluRay.MULTI.x264-DiG8ALL.mkv')
-    desktop = os.path.abspath("/Users/Jon/Downloads/geo.mkv")
-    blade = os.path.abspath(
-        '/Users/jon/Downloads/Blade.Runner.2049.2017.VF2.2160p.UHD.BluRay.REMUX.HEVC.HDR.TrueHD.Atmos.7.1.DTS-HDMA.AC3.5.1-TSC.mkv')
-    configname = 'defaults.ini'
-    tgt = 'mp4'
-    info = {'id': showid,
-            'id_type': id_type2,
-            'season': 16,
-            'episode': 18
-            }
-
-    VP = build_machine(infile=desktop, config=configname, target=tgt, tagging_info=None, notify=None)
-
-    start_machine(VP)
-    print('yeah')
