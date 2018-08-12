@@ -81,7 +81,6 @@ class VideoStream(Stream):
         self.supported_options = stream_format.supported_options.copy()
 
 
-
 class AudioStream(Stream):
     # supported_options = [Codec, Channels, Language, Disposition, Bitrate, Tag]
     kind = 'audio'
@@ -91,7 +90,6 @@ class AudioStream(Stream):
         assert issubclass(stream_format, AudioFormat)
         self.stream_format = stream_format
         self.supported_options = stream_format.supported_options.copy()
-
 
 
 class SubtitleStream(Stream):
@@ -105,7 +103,6 @@ class SubtitleStream(Stream):
         self.supported_options = stream_format.supported_options.copy()
 
 
-
 class ImageStream(Stream):
     # supported_options = [Codec, Language, Disposition, Tag]
     kind = 'subtitle'
@@ -115,7 +112,6 @@ class ImageStream(Stream):
         assert issubclass(stream_format, ImageFormat)
         self.stream_format = stream_format
         self.supported_options = stream_format.supported_options.copy()
-
 
 
 class StreamFactory(object):
@@ -129,23 +125,3 @@ class StreamFactory(object):
             return SubtitleStream(fmt)
         elif issubclass(fmt, ImageFormat):
             return ImageStream(fmt)
-
-    # @classmethod
-    # def get_stream_by_type(cls, stream: Stream, fmt) -> Union[VideoStream, AudioStream, SubtitleStream]:
-    #     assert isinstance(stream, (VideoStream, AudioStream, SubtitleStream))
-    #     if isinstance(stream, VideoStream):
-    #         return VideoStream(fmt)
-    #     elif isinstance(stream, AudioStream):
-    #         return AudioStream(fmt)
-    #     elif isinstance(stream, SubtitleStream):
-    #         return SubtitleStream(fmt)
-    #
-    # @classmethod
-    # def get_stream_by_name(cls, name, codec) -> Stream:
-    #     assert name in ['audio', 'video', 'subtitle']
-    #     if name == 'video':
-    #         return VideoStream(codec)
-    #     elif name == 'audio':
-    #         return AudioStream(codec)
-    #     elif name == 'subtitle':
-    #         return SubtitleStream(codec)

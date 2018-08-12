@@ -6,18 +6,19 @@ from mediaprocessor.converter.options import *
 from mediaprocessor.converter.encoders import EncoderFactory, Encoders
 from mediaprocessor.converter.formats import FormatFactory
 import sys
+import os
 import logging
 from mediaprocessor.converter.ffmpeg import FFMpeg, FFMpegError, FFMpegConvertError
 
-log = logging.getLogger()
-log.setLevel(logging.DEBUG)
-sh = logging.StreamHandler(sys.stdout)
-sh.setLevel(logging.DEBUG)
-formatter = logging.Formatter('%(levelname)s - %(message)s')
-sh.setFormatter(formatter)
-log.addHandler(sh)
+#log = logging.getLogger()
+#log.setLevel(logging.DEBUG)
+#sh = logging.StreamHandler(sys.stdout)
+#sh.setLevel(logging.DEBUG)
+#formatter = logging.Formatter('%(levelname)s - %(message)s')
+#sh.setFormatter(formatter)
+#log.addHandler(sh)
 
-# log = logging.getLogger(__name__)
+log = logging.getLogger(__name__)
 
 """Processes a video file in steps:
 1) Analyse video file
@@ -173,7 +174,6 @@ class Processor(object):
                                           compare_presets=self.config.ignore)
 
         self.add_extra_streams()
-        #        self.add_extra_audio_streams()
         self.target_container.fix_disposition()
         self.ob.print_mapping(self.source_container, self.target_container, self.ob.mapping)
         commandline = self.config.ffmpeg.generate_commands(self.source_container,
@@ -267,7 +267,8 @@ class Processor(object):
                     if o == target_stream:
                         b = False
                     if (few_audio_tracks and (o.stream_format == target_stream.stream_format and
-                                              o.options.get_unique_option(Bitrate) > target_stream.options.get_unique_option(Bitrate))
+                                              o.options.get_unique_option(
+                                                  Bitrate) > target_stream.options.get_unique_option(Bitrate))
                     ):
                         b = False
                 if b:
@@ -280,37 +281,6 @@ class Processor(object):
 
         # Step 3 - Identify best source stream for creation
 
-    def add_extra_audio_streams(self):
-
-        tpl = self.config.stream_formats
-
-        extra_streams = []
-        for fmt in self.config.audio_create_tracks:
-            stream = AudioStream(fmt)
-            if fmt in tpl:
-                stream.add_options(*tpl[fmt].options)
-                extra_streams.append(stream)
-
-        if extra_streams:
-            for idx, stream in self.source_container.streams.items():
-                if isinstance(stream, AudioStream):
-                    if isinstance(stream, AudioStream):
-                        b = False
-                        for lng in self.config.audio_languages:
-                            if lng == stream.options.get_unique_option(Language):
-                                b = True
-                                break
-
-                        if not b:
-                            continue
-
-                    for t in extra_streams:
-                        target_stream = AudioStream(t.stream_format)
-                        target_stream.add_options(*t.options)
-                        leftovers = list(filter(lambda x: not target_stream.options.has_option(x), stream.options))
-                        target_stream.add_options(*leftovers)
-                        self.ob.add_mapping(idx, target_stream, duplicate_check=True)
-
     def convert(self):
         try:
             for t in self.config.ffmpeg.convert(self.infile, self.output, self.options):
@@ -319,15 +289,3 @@ class Processor(object):
 
         except:
             return None
-
-
-if __name__ == '__main__':
-    import os
-
-    laptop = os.path.abspath('/Users/Jon/Downloads/Ratatouille (2007) - HD 1080P.mp4')
-    desktop = os.path.abspath("//Users/Jon/Downloads/Geostorm 2017 1080p FR EN X264 AC3-mHDgz.mkv")
-    cfgmgr = configuration.CfgMgr()
-    cfgmgr.load('defaults.ini')
-    p = Processor(cfgmgr.cfg, desktop, '/Users/jon/Downloads/toto.mp4', 'mp4')
-    p.process()
-#    p.convert()
