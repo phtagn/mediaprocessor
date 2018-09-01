@@ -3,6 +3,7 @@ import locale
 import os
 from mediaprocessor.converter.options import *
 from mediaprocessor.converter.formats import FormatFactory
+
 log = logging.getLogger(__name__)
 
 console_encoding = locale.getdefaultlocale()[1] or 'UTF-8'
@@ -14,7 +15,6 @@ class FFprobeParser(object):
         output = json.loads(jsonoutput)
         self._streams = output['streams']
         self._format = output['format']
-
 
     @property
     def streams(self):
@@ -40,7 +40,7 @@ class FFprobeParser(object):
             except KeyError:
                 return Bitrate(0)
 
-        return Bitrate(int(br/1000))
+        return Bitrate(int(br / 1000))
 
     def stream_format(self, index):
         fmt = FormatFactory.get_format(self.streams[index].get('codec_name', ''))

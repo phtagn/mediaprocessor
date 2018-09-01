@@ -476,7 +476,7 @@ class Encoders(object):
     _supported_codecs = [Vorbis, Aac, FdkAac, Faac, Ac3, EAc3, Flac, Dts, Mp2, Mp3,
                          Theora, H264, NVEncH264, H264QSV, H264VAAPI, H265, NVEncH265, HEVCQSV, Divx, Vp8, H263, Flv,
                          Mpeg1, Mpeg2,
-                         MOVText, WebVTT, SSA, SubRip, DVBSub, DVDSub, Pgs]
+                         MOVText, WebVTT, SSA, SubRip, DVBSub, DVDSub, Pgs, Srt]
 
     def __init__(self, ffmpeg):
         self._available_encoders = ffmpeg.encoders
@@ -525,6 +525,7 @@ class EncoderFactory(object):
                 encoder = self.get_codec_by_name(self.preferred[target_stream.stream_format.name])
             except (EncoderNotFound, KeyError):
                 encoder = self._get_best_encoder(target_stream.stream_format.name)
+
             if encoder.codec_name in self.defaults:
                 for opt in self.defaults[encoder.codec_name]:
                     encoder.add_option(opt)
@@ -533,7 +534,11 @@ class EncoderFactory(object):
 
     def _get_best_encoder(self, stream_format):
         matching_encoder = [cdc for cdc in self.encoders.supported_codecs if cdc.produces.name == stream_format]
-        return sorted(matching_encoder, key=lambda enc: enc.score, reverse=True)[0]()
+        try:
+            return sorted(matching_encoder, key=lambda enc: enc.score, reverse=True)[0]()
+        except IndexError:
+            log.critical('Could not find encoder to encode format %s', stream_format)
+            raise EncoderNotFound
 
     def get_codec_by_name(self, name: str):
         codec_class = None

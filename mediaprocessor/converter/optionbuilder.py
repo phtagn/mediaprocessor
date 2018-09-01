@@ -27,7 +27,8 @@ class OptionBuilder(object):
     def generate_target_container(self, stream_templates, stream_defaults, audio_languages, subtitle_languages,
                                   compare_presets=None):
 
-        for index, stream in self.source_container.streams.items():
+        for stream in self.source_container.streams:
+            index = self.source_container.absolute_stream_number(stream.uid)
             if not stream.stream_format.enabled:
                 continue
 

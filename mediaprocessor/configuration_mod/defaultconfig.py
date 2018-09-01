@@ -1,7 +1,7 @@
 # coding=utf-8
 from collections import OrderedDict
 from configobj import ConfigObj
-from mediaprocessor.converter.encoders import Encoders, _VideoCodec, _AudioCodec, _SubtitleCodec, _Copy
+from mediaprocessor.converter.encoders import Encoders, _VideoCodec, _AudioCodec, _SubtitleCodec
 from mediaprocessor.converter.formats import FormatFactory, VideoFormat, AudioFormat, SubtitleFormat
 from mediaprocessor.converter.options import *
 
@@ -70,6 +70,30 @@ for fmt_name, fmt in FormatFactory.supported_formats.items():
 
 streams = {**videostreams, **audiostreams, **subtitlestreams}
 
+ctn_default_options = {
+            'video': {
+                'accepted_track_formats': 'force_list(default=list(h264, h265, hevc))',
+                'default_format': 'string(default=hevc)',
+                'prefer_copy': 'boolean(default=True)'
+            },
+
+            'audio': {
+                'accepted_track_formats': 'force_list(default=list(aac, ac3))',
+                'default_format': 'string(default=aac)',
+                'force_create_tracks': 'force_list(default=None)',
+                'prefer_copy': 'boolean(default=True)'
+            },
+
+            'subtitle': {
+                'accepted_track_formats': 'force_list(default=list(mov_text))',
+                'default_format': 'string(default=mov_text)',
+                'prefer_copy': 'boolean(default=True)'
+            },
+
+            'post_processors': 'force_list(default=None)',
+            'preopts': 'string(default=None)',
+            'postopts': 'string(default=None)'}
+
 refreshers = {
     'plex': {'host': 'string(default=localhost)',
              'ssl': 'boolean(default=False)',
@@ -114,30 +138,9 @@ defaultconfig = {
         'permissions': 'integer(default=777)'
     },
     'Containers': {
-        'mp4': {
-            'video': {
-                'accepted_track_formats': 'force_list(default=list(h264, h265, hevc))',
-                'default_format': 'string(default=hevc)',
-                'prefer_copy': 'boolean(default=True)'
-            },
-
-            'audio': {
-                'accepted_track_formats': 'force_list(default=list(aac, ac3))',
-                'default_format': 'string(default=aac)',
-                'force_create_tracks': 'force_list(default=None)',
-                'prefer_copy': 'boolean(default=True)'
-            },
-
-            'subtitle': {
-                'accepted_track_formats': 'force_list(default=list(mov_text))',
-                'default_format': 'string(default=mov_text)',
-                'prefer_copy': 'boolean(default=True)'
-            },
-
-            'post_processors': 'force_list(default=None)',
-            'preopts': 'string(default=None)',
-            'postopts': 'string(default=None)'
-        }},
+        'mp4': ctn_default_options,
+        'matroska': ctn_default_options
+        },
     'StreamFormats': streams,
     'PreferredEncoders': preferred_encoders,
     'EncoderOptions': encoders,

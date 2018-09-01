@@ -20,11 +20,17 @@ class Container(object):
         """
         if fmt in self.supported_formats:
             self.format = fmt
-            self.streams = {}
-            self.audio_streams = {}
-            self.video_streams = {}
-            self.subtitle_streams = {}
+            self.streams = []
+            self.audio_streams = []
+            self.video_streams = []
+            self.subtitle_streams = []
+            self.image_streams = []
             self.file_path = file_path
+            self._absolute_number = {}
+            self._relative_number = {}
+
+            self.relative_counter = {}
+
         else:
             raise Exception('Format %s not supported', fmt)
 
@@ -40,74 +46,77 @@ class Container(object):
         :param duplicate_check: Indicates whether the source_container should check that streams are not duplicated.
         See is_duplicate.
         :type duplicate_check: bool
-        :return: Number of the stream that was added, None if the stream was rejected
+        :return: Absolute number of the stream that was added, None if the stream was rejected
         :rtype: int or None
         """
         assert isinstance(stream, (VideoStream, AudioStream, SubtitleStream, ImageStream))
-        if not duplicate_check or not self.is_duplicate(stream):
-            if stream_number is not None:
-                sn = stream_number
-            else:
-                sn = len(self.streams)
-            if stream_number in self.streams.keys():
-                log.info('Replacing stream %s', stream_number)
 
-            self.streams.update({sn: stream})
+        if stream_number is not None:
+            an = stream_number
+        else:
+            an = len(self.streams)
 
-            if isinstance(stream, VideoStream):
-                self.video_streams.update({stream: len(self.video_streams)})
-            elif isinstance(stream, AudioStream):
-                self.audio_streams.update({stream: len(self.audio_streams)})
-            elif isinstance(stream, SubtitleStream):
-                self.subtitle_streams.update({stream: len(self.subtitle_streams)})
+        if stream_number in self._absolute_number.values():
+            log.info('Replacing stream %s', stream_number)
 
-            return sn
+        self.streams.append(stream)
+        self._absolute_number.update({stream.uid: an})
 
-    def relative_stream_number(self, stream):
+        if stream.__class__.__name__ in self.relative_counter:
+            self.relative_counter[stream.__class__.__name__] += 1
+        else:
+            self.relative_counter.update({stream.__class__.__name__: 0})
+
+        self._relative_number.update({stream.uid: self.relative_counter[stream.__class__.__name__]})
+
+        if isinstance(stream, VideoStream):
+            self.video_streams.append(stream)
+        elif isinstance(stream, AudioStream):
+            self.audio_streams.append(stream)
+        elif isinstance(stream, SubtitleStream):
+            self.subtitle_streams.append(stream)
+        elif isinstance(stream, ImageStream):
+            self.image_streams.append(stream)
+
+        return an
+
+    def relative_stream_number(self, uid):
         try:
-            return self.video_streams[stream]
-        except KeyError:
-            pass
-        try:
-            return self.audio_streams[stream]
-        except KeyError:
-            pass
-        try:
-            return self.subtitle_streams[stream]
+            return self._relative_number[uid]
         except KeyError:
             return None
 
     def absolute_stream_number(self, uid):
-        for k, v in self.streams.items():
-            if v.uid == uid:
-                return k
-        return None
+        try:
+            return self._absolute_number[uid]
+        except KeyError:
+            return None
 
-    def is_duplicate(self, stream):
-        """
-        Checks whether a stream is a duplicate of an existing stream already present in the source_container. See __eq__ method
-        of Streams class to see how duplicate checking occurs.
-        :param stream: Stream to be checked against the source_container
-        :type stream: AudioStream, VideoStream or SubtitleStream
-        :return: True or False
-        :rtype: bool
-        """
-
-        if isinstance(stream, AudioStream):
-            for k in self.audio_streams:
-                if stream == self.audio_streams[k]:
-                    return True
-        if isinstance(stream, VideoStream):
-            for k in self.video_streams:
-                if stream.stream_format == self.video_streams[k].stream_format and stream == self.video_streams[k]:
-                    return True
-        if isinstance(stream, SubtitleStream):
-            for k in self.subtitle_streams:
-                if stream.stream_format == self.subtitle_streams[k].stream_format and stream == self.subtitle_streams[
-                    k]:
-                    return True
-
-        return False
+    # def is_duplicate(self, stream):
+    #     """
+    #     Checks whether a stream is a duplicate of an existing stream already present in the source_container. See __eq__ method
+    #     of Streams class to see how duplicate checking occurs.
+    #     :param stream: Stream to be checked against the source_container
+    #     :type stream: AudioStream, VideoStream or SubtitleStream
+    #     :return: True or False
+    #     :rtype: bool
+    #     """
+    #
+    #     if isinstance(stream, AudioStream):
+    #         for k in self.audio_streams:
+    #             if stream == self.audio_streams[k]:
+    #                 return True
+    #     if isinstance(stream, VideoStream):
+    #         for k in self.video_streams:
+    #             if stream.stream_format == self.video_streams[k].stream_format and stream == self.video_streams[k]:
+    #                 return True
+    #     if isinstance(stream, SubtitleStream):
+    #         for k in self.subtitle_streams:
+    #             if stream.stream_format == self.subtitle_streams[k].stream_format and stream == self.subtitle_streams[
+    #                 k]:
+    #                 return True
+    #
+    #     return False
 
     @property
     def hd(self):
@@ -135,17 +144,20 @@ class Container(object):
         for s in streams_type:
             d = s.options.get_unique_option(Disposition)
             if d:
-                dispo_dict[d.value].append(s)
+                dispo_dict[d.value['default']].append(s)
             else:
                 s.add_options(Disposition({'default': 0}))
 
         if len(dispo_dict[1]) == 0 and len(dispo_dict[0]) > 0:
-            dispo_dict[0][0].add_options(Disposition({'default': 1}))
+            dispo = dispo_dict[0][0].options.get_unique_option(Disposition)
+            dispo._value['default'] = 1
+            # dispo_dict[0][0].add_options(Disposition({'default': 1}))
 
         if len(dispo_dict[1]) > 1:
             for k in dispo_dict[1][1:]:
-                k.add_options(Disposition({'default': 0}))
-
+                dispo = k.options.get_unique_option(Disposition)
+                dispo._value['default'] = 0
+                #k.add_options(Disposition({'default': 0}))
 
 
 class ContainerFactory(object):
@@ -195,6 +207,9 @@ class ContainerFactory(object):
                 s.add_options(parser.language(idx),
                               parser.disposition(idx))
                 # ctn.add_stream(s, idx)
+
+            elif isinstance(s, ImageStream):
+                s.add_options(parser.disposition(idx))
 
             if s:
                 ctn.add_stream(s, idx)

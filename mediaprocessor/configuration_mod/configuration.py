@@ -6,12 +6,15 @@ import logging
 from mediaprocessor.configuration_mod.defaultconfig import configspec
 import os
 from mediaprocessor.helpers import languagecode
+import os
 
 log = logging.getLogger(__name__)
 
 
 class CfgMgr(object):
     def __init__(self):
+        self.configdir = os.getenv('CONFIGDIR',
+                                   os.path.join(os.path.dirname(os.path.dirname(os.path.realpath(__file__))), 'config'))
         self._usercfg = None
         self._validator = validate.Validator()
 
@@ -34,13 +37,7 @@ class CfgMgr(object):
         return self._defaultconfig
 
     def savedefaults(self):
-        self._defaultconfig.filename = os.path.join(
-            os.path.dirname(
-                os.path.dirname(
-                    os.path.realpath(__file__))),
-            'config',
-            'defaults.ini')
-        self._defaultconfig.write()
+        self.save('defaults.ini')
 
     @property
     def cfg(self) -> ConfigObj:
@@ -63,7 +60,7 @@ class CfgMgr(object):
                 log.error('Overrides contained errors, discarding')
                 overrides = None
 
-        inifile = os.path.join(os.path.dirname(os.path.dirname(os.path.realpath(__file__))), 'config', config)
+        inifile = os.path.join(self.configdir, config)
 
         if os.path.exists(inifile):
             usersettings = ConfigObj(inifile, configspec=configspec, encoding='UTF8', default_encoding='UTF8',
@@ -135,7 +132,7 @@ class CfgMgr(object):
 
     def save(self, name: str) -> bool:
         if self.cfg and name:
-            self.cfg.filename = os.path.join('config', name + '.ini')
+            self.cfg.filename = os.path.join(self.configdir, name + '.ini')
             self.cfg.write()
             return True
 

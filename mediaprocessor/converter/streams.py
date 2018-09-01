@@ -105,7 +105,7 @@ class SubtitleStream(Stream):
 
 class ImageStream(Stream):
     # supported_options = [Codec, Language, Disposition, Tag]
-    kind = 'subtitle'
+    kind = 'image'
 
     def __init__(self, stream_format):
         super(ImageStream, self).__init__()

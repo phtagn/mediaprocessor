@@ -22,8 +22,12 @@ class IStreamOption(metaclass=ABCMeta):
     """
 
     def __init__(self):
-        self.value = None
+        self._value = None
         self.stream_specifier = None
+
+    @property
+    def value(self):
+        return self._value
 
     @abstractmethod
     def parse(self, stream_type: str, stream_number: Union[None, int] = None) -> list:
@@ -140,31 +144,12 @@ class OptionFactory(object):
         cls.options.update({option.__name__.lower(): option})
 
 
-# class Codec(IStreamOption):
-#     name = 'codec'
-#     ffprobe_name = 'codec_name'
-#
-#     def __init__(self, val: str):
-#         super(Codec, self).__init__()
-#         """
-#         :param val: name of the codec
-#         """
-#         self.value = val
-#
-#     def parse(self, stream_type: str, stream_number: Union[None, int] = None) -> list:
-#         super(Codec, self).parse(stream_type, stream_number)
-#         return [f'-codec:{self.stream_specifier}', self.value]
-
-
-#OptionFactory.register_option(Codec)
-
-
 class Fps(IStreamValueOption):
 
     def __init__(self, val: int):
         super(Fps, self).__init__()
         if val > 1 or val < 120:
-            self.value = val
+            self._value = val
 
     def parse(self, stream_type: str, stream_number: Union[None, int] = None):
         super(Fps, self).parse(stream_type, stream_number)
@@ -184,7 +169,7 @@ class Map(IStreamValueOption):
         if not isinstance(val[0], int) or not isinstance(val[1], int):
             raise Exception
 
-        self.value = val
+        self._value = val
 
     def parse(self, stream_type: str, stream_number: Union[None, int] = None):
         return ['-map', f'{self.value[0]}:{self.value[1]}']
@@ -202,7 +187,7 @@ class Channels(IStreamValueOption):
         :param val: number of audio channels, from 1 to 12
         """
         if str(val).isnumeric() and 13 > int(val) > 0:
-            self.value = val
+            self._value = val
 
     def parse(self, stream_type: str, stream_number: Union[None, int] = None) -> list:
         super(Channels, self).parse(stream_type, stream_number)
@@ -224,7 +209,7 @@ class Language(IStreamOption):
 
         :param val: 3-letter language code
         """
-        self.value = languagecode.validate(val)
+        self._value = languagecode.validate(val)
 
     def parse(self, stream_type: str, stream_number: Union[None, int] = None) -> list:
         super(Language, self).parse(stream_type, stream_number)
@@ -249,7 +234,7 @@ class Tag(MetadataOption):
 
     def __init__(self, val):
         super(Tag, self).__init__()
-        self.value = val
+        self._value = val
 
     def parse(self, stream_type: str, stream_number: Union[None, int] = None) -> list:
         super(Tag, self).parse(stream_type, stream_number)
@@ -271,7 +256,7 @@ class Bitrate(IStreamValueOption):
         :param val: bitrate, in thousands
         """
         if str(val).isnumeric():
-            self.value = int(val)
+            self._value = int(val)
 
     def parse(self, stream_type: str, stream_number: Union[None, int] = None) -> list:
         super(Bitrate, self).parse(stream_type, stream_number)
@@ -316,7 +301,7 @@ class Crf(EncoderOption):
         super(Crf, self).__init__()
         try:
             if 51 > val > 0:
-                self.value = val
+                self._value = val
         except TypeError:
             pass
 
@@ -338,7 +323,7 @@ class PixFmt(IStreamOption):
 
         :param val: pix format see pix_fmt in ffmpeg documentation
         """
-        self.value = val if val else None
+        self._value = val if val else None
 
     def parse(self, stream_type: str, stream_number: Union[None, int] = None) -> list:
         super(PixFmt, self).parse(stream_type, stream_number)
@@ -357,9 +342,9 @@ class Bsf(EncoderOption):
         super(Bsf, self).__init__()
         if val:
             if isinstance(val, str):
-                self.value = [val]
+                self._value = [val]
             elif isinstance(val, list):
-                self.value = val
+                self._value = val
 
     def parse(self, stream_type: str, stream_number: Union[None, int] = None) -> list:
         super(Bsf, self).parse(stream_type, stream_number)
@@ -370,16 +355,40 @@ OptionFactory.register_option(Bsf)
 
 
 class Disposition(MetadataOption):
-    def __init__(self, val):
+
+    def __init__(self, val: dict):
         super(Disposition, self).__init__()
-        if 'default' in val:
-            self.value = val['default']
-        else:
-            self.value = None
+
+        self._value = {}
+
+        for k, v in val.items():
+            self._value.update({k: int(v)})
+
+        self._value = None if len(self._value) == 0 else self._value
 
     def parse(self, stream_type: str, stream_number: Union[None, int] = None) -> list:
         super(Disposition, self).parse(stream_type, stream_number)
-        return [f'-disposition:{self.stream_specifier}', str(self.value)]
+        p = []
+        for k, v in self._value.items():
+            if v == 1:
+                p.extend([f'-disposition:{self.stream_specifier}', str(k)])
+            elif k.lower() == 'default' and v == 0:
+                p.extend([f'-disposition:{self.stream_specifier}', str(v)])
+
+        return p
+
+
+# class Disposition(MetadataOption):
+#     def __init__(self, val):
+#         super(Disposition, self).__init__()
+#         if 'default' in val:
+#             self._value = val['default']
+#         else:
+#             self._value = None
+#
+#     def parse(self, stream_type: str, stream_number: Union[None, int] = None) -> list:
+#         super(Disposition, self).parse(stream_type, stream_number)
+#         return [f'-disposition:{self.stream_specifier}', str(self.value)]
 
 
 OptionFactory.register_option(Disposition)
@@ -395,7 +404,7 @@ class Height(IStreamValueOption):
         except TypeError:
             val = None
 
-        self.value = val
+        self._value = val
 
     def parse(self, stream_type: str, stream_number: Union[None, int] = None) -> list:
         return []
@@ -421,7 +430,7 @@ class Width(IStreamValueOption):
         except TypeError:
             val = None
 
-        self.value = val
+        self._value = val
 
     def parse(self, stream_type: str, stream_number: Union[None, int] = None) -> list:
         return []
@@ -437,7 +446,7 @@ class Level(IStreamValueOption):
         super(Level, self).__init__()
         try:
             if float(val) > 0:
-                self.value = float(val)
+                self._value = float(val)
         except ValueError:
             pass
 
@@ -454,7 +463,7 @@ class Profile(IStreamOption):
 
     def __init__(self, val):
         super(Profile, self).__init__()
-        self.value = val
+        self._value = val if val else None
 
     def parse(self, stream_type: str, stream_number: Union[None, int] = None) -> list:
         super(Profile, self).parse(stream_type, stream_number)
@@ -468,7 +477,7 @@ class Filter(IStreamOption):
 
     def __init__(self):
         super(Filter, self).__init__()
-        self.value = []
+        self._value = []
 
     def add_filter(self, *filters):
         for f in filters:

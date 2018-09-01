@@ -165,7 +165,7 @@ class Processor(object):
 
         self.ob = OptionBuilder(self.source_container, self.target_container)
 
-    def process(self):
+    def process(self, cmd_only=False):
 
         self.ob.generate_target_container(self.config.stream_formats,
                                           self.config.defaults,
@@ -173,7 +173,8 @@ class Processor(object):
                                           self.config.subtitle_languages,
                                           compare_presets=self.config.ignore)
 
-        self.add_extra_streams()
+        if self.config.audio_create_tracks:
+            self.add_extra_streams()
         self.target_container.fix_disposition()
         self.ob.print_mapping(self.source_container, self.target_container, self.ob.mapping)
         commandline = self.config.ffmpeg.generate_commands(self.source_container,
@@ -185,13 +186,17 @@ class Processor(object):
 
         log.debug('FFmpeg command:\n %s', ' '.join(commandline))
 
-        try:
-            for p in self.config.ffmpeg.convert2(commandline):
-                print(p)
+        if not cmd_only:
+            try:
+                for p in self.config.ffmpeg.convert2(commandline):
+                    self.progress = p
 
-            return self.target_container
-        except (FFMpegError, FFMpegConvertError):
-            return None
+                return self.target_container
+            except (FFMpegError, FFMpegConvertError) as e:
+                raise e
+
+    def report_progress(self):
+        return self.progress
 
     def suitable_language(self, stream):
 

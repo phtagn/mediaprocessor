@@ -26,6 +26,7 @@ class SubtitleFormat(BaseFormat):
 
 class ImageFormat(BaseFormat):
     enabled = False
+    supported_options = [Disposition]
 
 
 class TheoraFormat(VideoFormat):

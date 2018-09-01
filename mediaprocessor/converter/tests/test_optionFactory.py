@@ -3,19 +3,16 @@ from mediaprocessor.converter.options import *
 from mediaprocessor.converter.parsers import FFprobeParser
 from mediaprocessor.converter.formats import FormatFactory
 
+
 class TestOptionFactory(unittest.TestCase):
     def test_get_option(self):
         self.assertIsNone(OptionFactory.get_option('NonExistent'))
-        self.assertIs(OptionFactory.get_option('codec'), Codec)
+        self.assertIs(OptionFactory.get_option('channels'), Channels)
 
     def test_streamvalueoptions(self):
         opt1 = Bitrate(1000)
         opt2 = Bitrate(1001)
         self.assertGreater(opt2, opt1)
-
-    def test_options(self):
-        options = Options(unique=True)
-        options.add_option(Codec)
 
 
 class TestFFprobeParser(unittest.TestCase):
@@ -24,7 +21,6 @@ class TestFFprobeParser(unittest.TestCase):
             self.input = infile.read()
 
     def test_parser(self):
-
         parser = FFprobeParser(self.input)
 
         self.assertEqual(parser.container_format, 'matroska,webm')
@@ -56,7 +52,7 @@ class TestOptions(unittest.TestCase):
         options_not_unique = Options()
 
         options_unique.add_option(PixFmt('yuv240p'))
-        #options_unique.add_option()
+        # options_unique.add_option()
 
     def test_compare(self):
         # Test options evaluate correctly regardless of order
@@ -92,8 +88,8 @@ class TestContainers(unittest.TestCase):
         from mediaprocessor.converter.parsers import FFprobeParser
         from mediaprocessor.converter.streams import VideoStream, AudioStream, SubtitleStream
         with open('output.json', 'r') as infile:
-            input = infile.read()
-        self.parser = FFprobeParser(input)
+            inputfile = infile.read()
+        self.parser = FFprobeParser(inputfile)
         self.video_stream = VideoStream(FormatFactory.get_format('h264'))
         self.video_stream.add_options(PixFmt('yuv420p'),
                                       Height(800),
@@ -104,9 +100,39 @@ class TestContainers(unittest.TestCase):
                                       Bitrate(2052)
                                       )
 
-
     def test_source_container(self):
         from mediaprocessor.converter.containers import ContainerFactory
         source_container = ContainerFactory.container_from_parser(self.parser)
         self.assertEqual(source_container.format, 'matroska')
         self.assertEqual(source_container.streams[0], self.video_stream)
+
+
+class TestOptiobBuilder(unittest.TestCase):
+
+    def setUp(self):
+        from mediaprocessor.converter.parsers import FFprobeParser
+        from mediaprocessor.converter.containers import ContainerFactory
+        with open('output.json', 'r') as infile:
+            inputfile = infile.read()
+
+        self.parser = FFprobeParser(inputfile)
+        self.source_container: ContainerFactory.container_from_parser(self.parser)
+
+    def test_option_builder(self):
+        pass
+
+
+class TestConfig(unittest.TestCase):
+    def setUp(self):
+        from mediaprocessor.configuration_mod import configuration, defaultconfig
+        self.defaults = defaultconfig.defaultconfig
+        self.cfgmgr = configuration.CfgMgr()
+
+    def test_defaults(self):
+        self.assertEqual(self.cfgmgr.defaultconfig['FFMPEG']['ffmpeg'], '/usr/local/bin/ffmpeg')
+
+    def test_overrides(self):
+        self.cfgmgr.load('defaults.ini', overrides={'FFMPEG': {'ffmpeg': 'test_overrides'}})
+        self.assertEqual(self.cfgmgr.cfg['FFMPEG']['ffmpeg'], 'test_overrides')
+
+

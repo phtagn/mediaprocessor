@@ -42,11 +42,11 @@ class FFMpegConvertError(Exception):
         self.output = output
         self.details = details
         self.pid = pid
+        self.message = message
 
     def __repr__(self):
         error = self.details if self.details else self.message
-        return ('<FFMpegConvertError error="%s", pid=%s, cmd="%s">' %
-                (error, self.pid, self.cmd))
+        return (f'<FFMpegConvertError error={self.message}, pid={self.pid}, cmd={self.cmd}>')
 
     def __str__(self):
         return self.__repr__()
@@ -210,7 +210,9 @@ class FFMpeg(object):
             else:
                 encoder.add_option(*target_stream.options)
 
-            cmds.extend(encoder.parse(target_container.relative_stream_number(target_stream)))
+            cmds.extend(encoder.parse(target_container.relative_stream_number(target_stream.uid)))
+
+        cmds.extend(['-f', target_container.format])
 
         if postopts:
             cmds.extend(postopts)
@@ -220,6 +222,9 @@ class FFMpeg(object):
         return cmds
 
     def convert2(self, cmds: list, timeout=10):
+        def seconds(hours, minutes, seconds):
+            return (int(hours) * 60 + int(minutes)) * 60 + int(seconds)
+
         if timeout:
             def on_sigalrm(*_):
                 signal.signal(signal.SIGALRM, signal.SIG_DFL)
@@ -235,8 +240,8 @@ class FFMpeg(object):
         yielded = False
         buf = ''
         total_output = ''
-        pat = re.compile(r'time=([0-9.:]+) ')
-
+        pat = re.compile('time=(\d{2}):(\d{2}):(\d{2})\.\d{2}')
+        duration = re.compile('Duration: (\d{2}):(\d{2}):(\d{2})\.\d{2}')
         while True:
             if timeout:
                 signal.alarm(timeout)
@@ -261,22 +266,21 @@ class FFMpeg(object):
                 except:
                     pass
 
+
             total_output += ret
+
             buf += ret
             if '\r' in buf:
                 line, buf = buf.split('\r', 1)
+                d = duration.findall(line)
+                if len(d) > 0:
+                    ds = seconds(*d[0])
 
-                tmp = pat.findall(line)
-                if len(tmp) == 1:
-                    timespec = tmp[0]
-                    if ':' in timespec:
-                        timecode = 0
-                        for part in timespec.split(':'):
-                            timecode = 60 * timecode + float(part)
-                    else:
-                        timecode = float(tmp[0])
+                t = pat.findall(line)
+                if len(t) > 0:
+                    ts = seconds(*t[0])
                     yielded = True
-                    yield timecode
+                    yield ts / ds
 
         if timeout:
             signal.signal(signal.SIGALRM, signal.SIG_DFL)
@@ -293,19 +297,20 @@ class FFMpeg(object):
             if line.startswith('Received signal'):
                 # Received signal 15: terminating.
                 raise FFMpegConvertError(line.split(':')[0], cmd, total_output, pid=p.pid)
-            # if line.startswith(cmds[2] + ': '):
-            #    err = line[len(cmds[2]) + 2:]
-            #    raise FFMpegConvertError('Encoding error', cmd, total_output,
-            #                             err, pid=p.pid)
             if line.startswith('Error while '):
                 raise FFMpegConvertError('Encoding error', cmd, total_output,
                                          line, pid=p.pid)
             if not yielded:
                 raise FFMpegConvertError('Unknown ffmpeg error', cmd,
                                          total_output, line, pid=p.pid)
+
         if p.returncode != 0:
+            e = total_output.split('\n')
+            i = e.index('Stream mapping:')
+            m = e[i-2:i]
+            print(e)
             raise FFMpegConvertError('Exited with code %d' % p.returncode, cmd,
-                                     total_output, pid=p.pid)
+                                     m, pid=p.pid)
 
     def convert(self, infile, outfile, opts, timeout=10, preopts=None, postopts=None):
         """
@@ -350,7 +355,6 @@ class FFMpeg(object):
         if postopts:
             cmds.extend(postopts)
         cmds.extend(['-y', outfile])
-
 
         if timeout:
             def on_sigalrm(*_):
@@ -440,4 +444,3 @@ class FFMpeg(object):
                                      total_output, pid=p.pid)
 
         return outfile
-
