@@ -10,13 +10,13 @@ import os
 import logging
 from mediaprocessor.converter.ffmpeg import FFMpeg, FFMpegError, FFMpegConvertError
 
-#log = logging.getLogger()
-#log.setLevel(logging.DEBUG)
-#sh = logging.StreamHandler(sys.stdout)
-#sh.setLevel(logging.DEBUG)
-#formatter = logging.Formatter('%(levelname)s - %(message)s')
-#sh.setFormatter(formatter)
-#log.addHandler(sh)
+# log = logging.getLogger()
+# log.setLevel(logging.DEBUG)
+# sh = logging.StreamHandler(sys.stdout)
+# sh.setLevel(logging.DEBUG)
+# formatter = logging.Formatter('%(levelname)s - %(message)s')
+# sh.setFormatter(formatter)
+# log.addHandler(sh)
 
 log = logging.getLogger(__name__)
 
@@ -188,15 +188,12 @@ class Processor(object):
 
         if not cmd_only:
             try:
-                for p in self.config.ffmpeg.convert2(commandline):
-                    self.progress = p
 
-                return self.target_container
+                for p in self.config.ffmpeg.convert2(commandline):
+                    yield p
+
             except (FFMpegError, FFMpegConvertError) as e:
                 raise e
-
-    def report_progress(self):
-        return self.progress
 
     def suitable_language(self, stream):
 
@@ -236,7 +233,10 @@ class Processor(object):
                                key=lambda s: (s.stream_format.score,
                                               s.options.get_unique_option(Channels).value,
                                               s.options.get_unique_option(Bitrate)), reverse=True)
-                    candidates.append(m[0])
+                    try:
+                        candidates.append(m[0])
+                    except IndexError:
+                        continue
         else:
             candidates = self.source_container.audio_streams
 

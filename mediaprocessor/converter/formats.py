@@ -155,6 +155,7 @@ class MjpegFormat(ImageFormat):
     name = 'mjpeg'
 
 
+
 class FormatFactory(object):
     supported_formats = {
         'theora': TheoraFormat,
@@ -183,6 +184,7 @@ class FormatFactory(object):
         'ssa': SSAFormat,
         'ass': SSAFormat,
         'subrip': SubRipFormat,
+        'dvd_subtitle': DvdSubFormat,
         'dvdsub': DvdSubFormat,
         'dvbsub': DVBSubFormat,
         'webvtt': WebVTTFormat,

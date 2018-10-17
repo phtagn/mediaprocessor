@@ -11,7 +11,7 @@ log = logging.getLogger(__name__)
 
 class OptionBuilder(object):
     """Builds a list of options suitable to pass to subprocess.Popen"""
-    image_subtitle_codecs = ['hdmv_pgs_subtitle']
+    image_subtitle_codecs = ['hdmv_pgs_subtitle', 'pgssub']
     bad_audio_codecs = ['truehd']
     bad_codecs = ['truehd', 'mjpeg', 'png']
 
@@ -98,8 +98,7 @@ class OptionBuilder(object):
 
             if isinstance(stream, SubtitleStream):
                 # FFmpeg can't transcode from an image based codec into a text based codec.
-                if stream.stream_format in self.image_subtitle_codecs and (
-                        target_stream.codec.value not in self.image_subtitle_codecs):
+                if stream.stream_format.is_image is True and target_stream.stream_format.is_image is False:
                     continue
 
             self.add_mapping(source_index=index, target_stream=target_stream)

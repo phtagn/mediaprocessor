@@ -7,14 +7,17 @@ from mediaprocessor.configuration_mod.defaultconfig import configspec
 import os
 from mediaprocessor.helpers import languagecode
 import os
+import glob
 
 log = logging.getLogger(__name__)
 
 
 class CfgMgr(object):
     def __init__(self):
-        self.configdir = os.getenv('CONFIGDIR',
-                                   os.path.join(os.path.dirname(os.path.dirname(os.path.realpath(__file__))), 'config'))
+        #self.configdir = os.getenv('CONVERTER_CONFIG_DIR',
+        #                           os.path.join(os.path.dirname(os.path.dirname(os.path.realpath(__file__))), 'config'))
+        self.configdir = os.getenv('CONVERTER_CONFIG_DIR',
+                                   os.path.join('/Users/jon/Downloads/', 'config'))
         self._usercfg = None
         self._validator = validate.Validator()
 
@@ -28,6 +31,14 @@ class CfgMgr(object):
 
         cfg.validate(self._validator, copy=True)
         self._defaultconfig = cfg
+
+    @property
+    def config_directory(self):
+        return self.configdir
+
+    @property
+    def available_config_files(self):
+        return list(map(os.path.basename, glob.glob(os.path.join(self.configdir, '*.ini'))))
 
     @property
     def defaultconfig(self) -> ConfigObj:
@@ -60,28 +71,33 @@ class CfgMgr(object):
                 log.error('Overrides contained errors, discarding')
                 overrides = None
 
-        inifile = os.path.join(self.configdir, config)
 
-        if os.path.exists(inifile):
+        inifile = os.path.join(self.configdir, config) if not isinstance(config, dict) else None
+
+        if inifile and os.path.exists(inifile):
             usersettings = ConfigObj(inifile, configspec=configspec, encoding='UTF8', default_encoding='UTF8',
                                      write_empty_values=True)
-            output = ""
-            if usersettings:
+        else:
+            usersettings = ConfigObj(config, configspec=configspec, encoding='UTF8', default_encoding='UTF8',
+                                     write_empty_values=True)
 
-                if overrides:
-                    usersettings.merge(overrides)
+        output = ""
+        if usersettings:
 
-                r = usersettings.validate(self._validator, preserve_errors=True)
+            if overrides:
+                usersettings.merge(overrides)
 
-                if isinstance(r, dict):
-                    raise ConfigException(output, self._usercfg)
-                usersettings.walk(self.proper_none)
+            r = usersettings.validate(self._validator, preserve_errors=True)
 
-                self._usercfg = usersettings
-                self.fixafewthings()
+            if isinstance(r, dict):
+                raise ConfigException(output, self._usercfg)
+            usersettings.walk(self.proper_none)
+
+            self._usercfg = usersettings
+            self.fixafewthings()
 
         else:
-            raise IOError(f'Could not find config file {inifile}')
+            raise FileNotFoundError(f'Could not find config file {inifile}')
 
     def fixafewthings(self):
 

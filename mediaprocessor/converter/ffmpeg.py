@@ -221,16 +221,9 @@ class FFMpeg(object):
 
         return cmds
 
-    def convert2(self, cmds: list, timeout=10):
+    def convert2(self, cmds: list):
         def seconds(hours, minutes, seconds):
             return (int(hours) * 60 + int(minutes)) * 60 + int(seconds)
-
-        if timeout:
-            def on_sigalrm(*_):
-                signal.signal(signal.SIGALRM, signal.SIG_DFL)
-                raise Exception('timed out while waiting for ffmpeg')
-
-            signal.signal(signal.SIGALRM, on_sigalrm)
 
         try:
             p = self._spawn(cmds)
@@ -243,13 +236,8 @@ class FFMpeg(object):
         pat = re.compile('time=(\d{2}):(\d{2}):(\d{2})\.\d{2}')
         duration = re.compile('Duration: (\d{2}):(\d{2}):(\d{2})\.\d{2}')
         while True:
-            if timeout:
-                signal.alarm(timeout)
 
             ret = p.stderr.read(10)
-
-            if timeout:
-                signal.alarm(0)
 
             if not ret:
                 # For small or very fast jobs, ffmpeg may never output a '\r'.  When EOF is reached, yield if we haven't yet.
@@ -282,9 +270,6 @@ class FFMpeg(object):
                     yielded = True
                     yield ts / ds
 
-        if timeout:
-            signal.signal(signal.SIGALRM, signal.SIG_DFL)
-
         p.communicate()  # wait for process to exit
 
         if total_output == '':
@@ -305,10 +290,13 @@ class FFMpeg(object):
                                          total_output, line, pid=p.pid)
 
         if p.returncode != 0:
-            e = total_output.split('\n')
-            i = e.index('Stream mapping:')
-            m = e[i-2:i]
-            print(e)
+            try:
+                e = total_output.split('\n')
+                i = e.index('Stream mapping:')
+                m = e[i-2:i]
+            except ValueError:
+                m = ''
+
             raise FFMpegConvertError('Exited with code %d' % p.returncode, cmd,
                                      m, pid=p.pid)
 

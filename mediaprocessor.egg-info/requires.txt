@@ -1,0 +1,8 @@
+babelfish
+qtfaststart
+transitions
+tmdbsimple
+mutagen
+configobj
+tvdb-api
+requests

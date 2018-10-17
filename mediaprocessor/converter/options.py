@@ -255,7 +255,7 @@ class Bitrate(IStreamValueOption):
 
         :param val: bitrate, in thousands
         """
-        if str(val).isnumeric():
+        if str(val).isnumeric() and val > 0:
             self._value = int(val)
 
     def parse(self, stream_type: str, stream_number: Union[None, int] = None) -> list:

@@ -10,6 +10,8 @@ setup(
               'mediaprocessor.helpers',
               'mediaprocessor.refreshers',
               'mediaprocessor.taggers',
+              'mediaprocessor.configuration_mod',
+              'mediaprocessor.processor'
               ],
     url='',
     license='GPL',

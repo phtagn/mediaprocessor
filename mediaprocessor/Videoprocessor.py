@@ -8,24 +8,24 @@ from mediaprocessor.helpers.helpers import breakdown
 from mediaprocessor.refreshers.refreshers import RefresherFactory
 import shutil
 import os
-
+from typing import Union, Optional
 import sys
 
-log = logging.getLogger()
-log.setLevel(logging.DEBUG)
-sh = logging.StreamHandler(sys.stdout)
-sh.setLevel(logging.DEBUG)
-formatter = logging.Formatter('%(levelname)s - %(message)s')
-sh.setFormatter(formatter)
-log.addHandler(sh)
+#log = logging.getLogger()
+#log.setLevel(logging.DEBUG)
+##sh = logging.StreamHandler(sys.stdout)
+#sh.setLevel(logging.DEBUG)
+#formatter = logging.Formatter('%(levelname)s - %(message)s')
+#sh.setFormatter(formatter)
+#log.addHandler(sh)
 
 
-# log = logging.getLogger(__name__)
+log = logging.getLogger(__name__)
 
 
 class VideoProcessor(object):
 
-    def __init__(self, infile: str, target: str, config: str = None, overrides: dict = None, tagging_info: dict = None,
+    def __init__(self, infile: str, target: str, config: Union[str, dict] = None, overrides: dict = None, tagging_info: dict = None,
                  notify: list = None):
         """
         Videoprocessor contains the methods to process a video from start to finish. The steps are :
@@ -133,7 +133,14 @@ class VideoProcessor(object):
         Processes the sourcefile into a target source_container
         :return: None
         """
-        self.output_container = self.processor.process()  # type: converter.containers.Container
+        for k in self.processor.process():
+            self._progress = k
+
+        self.output_container = self.processor.target_container  # type: converter.containers.Container
+
+    @property
+    def progress(self):
+        return self._progress
 
     def do_tag(self):
         _id = self.tagging_info.get('id', None)
@@ -272,8 +279,7 @@ def build_machine(infile, target, config, tagging_info=None, notify=None):
     return videoprocessor
 
 
-def start_machine(infile, target, config, tagging_info=None, notify=None):
-    vp = build_machine(infile, target, config, tagging_info=tagging_info, notify=notify)
+def start_machine(vp):
     vp.process()
     vp.tag()
     vp.postprocess()
